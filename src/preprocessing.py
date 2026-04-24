@@ -110,30 +110,20 @@ def convert_data(df):
 
 def create_features(df):
     """
-    2d. Creating — Engineer new features.
+    2d. Feature engineering — drop collinear columns.
+    BMI already captures Weight and Height (BMI = Weight / Height^2),
+    so those two are dropped. We do NOT create BMI_Category or
+    Comorbidity_Count because each would be a deterministic function of
+    columns we already keep, which inflates multicollinearity and makes
+    logistic-regression coefficients uninterpretable.
     """
-    print_step("Creating: Engineering new features")
+    print_step("Engineering features / dropping redundant columns")
     df = df.copy()
 
-    # BMI Category
-    if "BMI" in df.columns:
-        df["BMI_Category"] = pd.cut(
-            df["BMI"],
-            bins=[0, 18.5, 25, 30, 100],
-            labels=[0, 1, 2, 3],  # Underweight, Normal, Overweight, Obese
-        ).astype(float).fillna(1).astype(int)
-        print("  Created BMI_Category: Underweight(0)/Normal(1)/Overweight(2)/Obese(3)")
-
-    # Comorbidity count
-    disease_cols = ["Skin_Cancer", "Other_Cancer", "Depression", "Diabetes", "Arthritis"]
-    available = [c for c in disease_cols if c in df.columns]
-    if available:
-        # For Diabetes, convert to binary (0 = no, >0 = yes)
-        temp = df[available].copy()
-        if "Diabetes" in available:
-            temp["Diabetes"] = (temp["Diabetes"] > 0).astype(int)
-        df["Comorbidity_Count"] = temp.sum(axis=1)
-        print(f"  Created Comorbidity_Count from {len(available)} indicators")
+    drop_cols = [c for c in ["Height_(cm)", "Weight_(kg)"] if c in df.columns]
+    if drop_cols:
+        df = df.drop(columns=drop_cols)
+        print(f"  Dropped redundant columns: {drop_cols}")
 
     return df
 
