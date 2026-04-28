@@ -19,6 +19,7 @@ def correct_data(df):
     """
     2a. Correcting — Identify and handle outliers.
     Uses IQR method to cap extreme values in numerical columns.
+    Lower bound is floored at 0 for variables that cannot be negative.
     """
     print_step("Correcting: Handling outliers")
     df = df.copy()
@@ -31,6 +32,9 @@ def correct_data(df):
         IQR = Q3 - Q1
         lower = Q1 - 1.5 * IQR
         upper = Q3 + 1.5 * IQR
+
+        # Floor at 0 — these variables cannot be negative
+        lower = max(lower, 0)
 
         n_outliers = ((df[col] < lower) | (df[col] > upper)).sum()
         if n_outliers > 0:
@@ -101,7 +105,6 @@ def convert_data(df):
             df[col] = df[col].map(mapping)
             n_unmapped = df[col].isnull().sum()
             if n_unmapped > 0:
-                # Fill unmapped with most common mapped value
                 df[col].fillna(df[col].mode()[0], inplace=True)
             print(f"  {col}: ordinal encoded ({len(mapping)} levels)")
 
@@ -111,6 +114,10 @@ def convert_data(df):
 def create_features(df):
     """
     2d. Creating — Engineer new features.
+    Note: We only create BMI_Category. We do NOT create Comorbidity_Count
+    because it is a linear combination of existing features (Skin_Cancer,
+    Other_Cancer, Depression, Arthritis, Diabetes), which causes severe
+    multicollinearity in logistic regression and distorts coefficients.
     """
     print_step("Creating: Engineering new features")
     df = df.copy()
@@ -124,24 +131,14 @@ def create_features(df):
         ).astype(float).fillna(1).astype(int)
         print("  Created BMI_Category: Underweight(0)/Normal(1)/Overweight(2)/Obese(3)")
 
-    # Comorbidity count
-    disease_cols = ["Skin_Cancer", "Other_Cancer", "Depression", "Diabetes", "Arthritis"]
-    available = [c for c in disease_cols if c in df.columns]
-    if available:
-        # For Diabetes, convert to binary (0 = no, >0 = yes)
-        temp = df[available].copy()
-        if "Diabetes" in available:
-            temp["Diabetes"] = (temp["Diabetes"] > 0).astype(int)
-        df["Comorbidity_Count"] = temp.sum(axis=1)
-        print(f"  Created Comorbidity_Count from {len(available)} indicators")
-
     return df
 
 
 def split_and_scale(df):
     """
-    Split into train/test and scale numerical features.
-    Returns X_train, X_test, y_train, y_test, scaler, feature_names.
+    Split into train/test and scale ALL features with StandardScaler.
+    Scaling all features ensures logistic regression coefficients are
+    comparable across features regardless of their original range.
     """
     print_step("Splitting and scaling data")
 
@@ -158,12 +155,15 @@ def split_and_scale(df):
     print(f"  Test:  {X_test.shape[0]:,} samples")
     print(f"  Target distribution (train): {y_train.value_counts(normalize=True).to_dict()}")
 
-    # Scale numerical features
-    cols_to_scale = [c for c in NUMERICAL_COLS if c in X_train.columns]
+    # Scale ALL features for comparable LR coefficients
     scaler = StandardScaler()
-    X_train[cols_to_scale] = scaler.fit_transform(X_train[cols_to_scale])
-    X_test[cols_to_scale] = scaler.transform(X_test[cols_to_scale])
-    print(f"  Scaled {len(cols_to_scale)} numerical features")
+    X_train = pd.DataFrame(
+        scaler.fit_transform(X_train), columns=feature_names, index=X_train.index
+    )
+    X_test = pd.DataFrame(
+        scaler.transform(X_test), columns=feature_names, index=X_test.index
+    )
+    print(f"  Scaled all {len(feature_names)} features with StandardScaler")
 
     return X_train, X_test, y_train, y_test, scaler, feature_names
 

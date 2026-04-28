@@ -32,13 +32,13 @@ def apply_smote(X_train, y_train):
 def train_logistic_regression(X_train, y_train, feature_names):
     """
     Train baseline logistic regression model.
-    Returns the trained model and coefficient analysis.
+    Uses SMOTE-resampled data, so class_weight is left at default (not
+    'balanced') to avoid double-compensating for class imbalance.
     """
     print_step("Training Logistic Regression (Baseline)")
 
     model = LogisticRegression(
         max_iter=1000,
-        class_weight="balanced",
         solver="lbfgs",
         random_state=RANDOM_STATE,
     )
@@ -63,7 +63,7 @@ def train_logistic_regression(X_train, y_train, feature_names):
     colors = ["#F44336" if c > 0 else "#2196F3" for c in top["Coefficient"]]
     ax.barh(top["Feature"], top["Coefficient"], color=colors, edgecolor="white")
     ax.set_title("Logistic Regression Coefficients (Top 15)", fontsize=14, fontweight="bold")
-    ax.set_xlabel("Coefficient Value", fontsize=12)
+    ax.set_xlabel("Coefficient Value (standardized)", fontsize=12)
     ax.axvline(x=0, color="black", linewidth=0.8)
     ax.spines[["top", "right"]].set_visible(False)
     save_plot(fig, MODEL_DIR, "logistic_regression_coefficients.png")
