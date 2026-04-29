@@ -57,7 +57,7 @@ ORDINAL_MAPPINGS = {
 }
 
 NUMERICAL_COLS = [
-    "Height_(cm)", "Weight_(kg)", "BMI",
+    "BMI",
     "Alcohol_Consumption", "Fruit_Consumption",
     "Green_Vegetables_Consumption", "FriedPotato_Consumption",
 ]
