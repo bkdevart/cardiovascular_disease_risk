@@ -113,23 +113,18 @@ def convert_data(df):
 
 def create_features(df):
     """
-    2d. Creating — Engineer new features.
-    Note: We only create BMI_Category. We do NOT create Comorbidity_Count
-    because it is a linear combination of existing features (Skin_Cancer,
-    Other_Cancer, Depression, Arthritis, Diabetes), which causes severe
-    multicollinearity in logistic regression and distorts coefficients.
+    2d. Creating — Drop redundant body-size columns to prevent multicollinearity.
+    Height and Weight are dropped because BMI already captures body-size information.
+    No new features are engineered so logistic regression coefficients remain
+    clean, interpretable log-odds ratios without VIF inflation.
     """
-    print_step("Creating: Engineering new features")
+    print_step("Creating: Dropping redundant body-size columns")
     df = df.copy()
 
-    # BMI Category
-    if "BMI" in df.columns:
-        df["BMI_Category"] = pd.cut(
-            df["BMI"],
-            bins=[0, 18.5, 25, 30, 100],
-            labels=[0, 1, 2, 3],  # Underweight, Normal, Overweight, Obese
-        ).astype(float).fillna(1).astype(int)
-        print("  Created BMI_Category: Underweight(0)/Normal(1)/Overweight(2)/Obese(3)")
+    cols_to_drop = [c for c in ["Height_(cm)", "Weight_(kg)"] if c in df.columns]
+    if cols_to_drop:
+        df = df.drop(columns=cols_to_drop)
+        print(f"  Dropped: {cols_to_drop}")
 
     return df
 
